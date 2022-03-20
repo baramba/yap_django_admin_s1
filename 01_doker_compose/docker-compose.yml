@@ -1,1 +1,38 @@
-
+version: '3.8'
+services:
+  service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python3 manage.py runserver 0.0.0.0:8000
+    environment:
+      - DB_NAME=${DB_NAME?Config .env file or environment variable}
+      - DB_USER=${DB_USER?Config .env file or environment variable}
+      - DB_PASSWORD=${DB_PASSWORD?Config .env file or environment variable}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+    expose:
+      - "8000"
+    depends_on:
+      - db
+    volumes:
+      - .:/movies:ro
+  nginx:
+    image: nginx:1.21.6
+    volumes:
+      - ./nginx:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - service
+    ports:
+      - "80:80"
+  db:
+    image: postgres:13
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    expose:
+      - "${DB_PORT}"
