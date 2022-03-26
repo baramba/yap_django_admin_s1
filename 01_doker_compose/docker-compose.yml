@@ -1,38 +1,59 @@
-version: '3.8'
+version: '3.7'
 services:
-  service:
+  django:
+    container_name: django
     build:
       context: .
       dockerfile: Dockerfile
-    command: python3 manage.py runserver 0.0.0.0:8000
+    env_file:
+      - .env
+    volumes:
+      - django_static:/home/app/static
     environment:
-      - DB_NAME=${DB_NAME?Config .env file or environment variable}
-      - DB_USER=${DB_USER?Config .env file or environment variable}
-      - DB_PASSWORD=${DB_PASSWORD?Config .env file or environment variable}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
+      - SECRET_KEY=${SECRET_KEY}
+    command: >
+      bash -c "
+       python manage.py collectstatic --noinput &&
+       python manage.py makemigrations &&
+       python manage.py migrate &&
+       python manage.py compilemessages -l en -l ru
+       python -m gunicorn config.wsgi"
     expose:
       - "8000"
+    # volumes:
+    #   - .:/movies:ro
     depends_on:
       - db
-    volumes:
-      - .:/movies:ro
+    ports:
+      - 8000:8000
   nginx:
+    container_name: nginx
     image: nginx:1.21.6
     volumes:
-      - ./nginx:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-    depends_on:
-      - service
+      - django_static:/static:ro
     ports:
       - "80:80"
+    depends_on:
+      - django
   db:
+    container_name: postgres
     image: postgres:13
-    volumes:
-      - ./data/db:/var/lib/postgresql/data
+    # volumes:
+    #   - ./data/db:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     expose:
       - "${DB_PORT}"
+    ports:
+      - 5454:5432
+volumes:
+  django_static:
