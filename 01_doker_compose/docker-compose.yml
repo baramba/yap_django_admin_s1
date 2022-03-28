@@ -9,6 +9,7 @@ services:
       - .env
     volumes:
       - django_static:/home/app/static
+      - ./app/gunicorn.conf.py:/home/app/gunicorn.conf.py:ro
     environment:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
@@ -19,41 +20,38 @@ services:
     command: >
       bash -c "
        python manage.py collectstatic --noinput &&
+       python manage.py compilemessages -l en -l ru
        python manage.py makemigrations &&
        python manage.py migrate &&
-       python manage.py compilemessages -l en -l ru
-       python -m gunicorn config.wsgi"
+       python -m gunicorn config.wsgi
+       "
     expose:
       - "8000"
     # volumes:
     #   - .:/movies:ro
     depends_on:
       - db
-    ports:
-      - 8000:8000
   nginx:
     container_name: nginx
     image: nginx:1.21.6
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - django_static:/static:ro
+      - django_static:/www/static:ro
     ports:
-      - "80:80"
+      - 80:80
     depends_on:
       - django
   db:
     container_name: postgres
     image: postgres:13
-    # volumes:
-    #   - ./data/db:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     expose:
-      - "${DB_PORT}"
+      - ${DB_PORT}
     ports:
-      - 5454:5432
+      - 5454:${DB_PORT}
 volumes:
   django_static:

@@ -2,7 +2,7 @@ FROM python:3
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ARG WORKDIR=/home/app
-ARG SRC_CODE_DIR=/app/02_movies_admin
+ARG SRC_CODE_DIR=/app
 ARG REQFILE=requirements.txt
 ARG USER=app
 ARG GROUP=apps
@@ -15,13 +15,11 @@ WORKDIR ${WORKDIR}
 ENV PATH="${WORKDIR}/.local/bin:${PATH}"
 RUN groupadd -r ${GROUP} && useradd --no-log-init -r -g ${GROUP} ${USER}
 
-COPY --chown=${USER}:${GROUP} ./${SRC_CODE_DIR}/../${REQFILE} ./
+# COPY --chown=${USER}:${GROUP} ./${SRC_CODE_DIR}/../${REQFILE} ./
 COPY --chown=${USER}:${GROUP} ${SRC_CODE_DIR} ./
 # COPY --chown=${USER}:${GROUP} ./docker-entrypoint.sh ./
 
-RUN mkdir ${WORKDIR}/static
-RUN chown -R ${USER}:${GROUP} ${WORKDIR}
-RUN apt update && apt install --yes gettext
+RUN mkdir ${WORKDIR}/static && chown -R ${USER}:${GROUP} ${WORKDIR} && apt update && apt install --yes gettext
 # apt install libpq-dev
 USER app
 # RUN python3 -m venv ./venv
